@@ -146,7 +146,7 @@ class TestKataPotterOfficial(unittest.TestCase):
         self.assertEqual(8 + (8 * 5 * 0.75), price([5, 1, 1, 2, 3, 4]))
 
     def test_EdgeCases(self):
-        #self.assertEqual(2 * (8 * 4 * 0.8), price([0, 0, 1, 1, 2, 2, 3, 4]))
+        self.assertEqual(2 * (8 * 4 * 0.8), price([0, 0, 1, 1, 2, 2, 3, 4]))
         self.assertEqual(3 * (8 * 5 * 0.75) + 2 * (8 * 4 * 0.8),
                          price([5, 5, 5, 5, 5,
                                 1, 1, 1, 1, 1,
