@@ -23,24 +23,17 @@ def bundle_books(cart):
             bundles.append(books)
             stacks = stacks - Counter(BOOKS)
 
-        # Make a bundle of 4 containing one orphan book
+        # Make a bundle of 3 most common an 1 least common
         bundle = []
-        for i in range(4):
-            book = books[i]
-            orphan_added = False
-            if stacks[book] > 1 or not orphan_added:
-                bundle.append(book)
-                if stacks[book] == 1:
-                    orphan_added = True
-                stacks = stacks - Counter({book: 1})
-        if bundle:
-            # Check if it's possible to make other bundles of 4 and a full serie
-            # If the bundle of 4 is impossible but the serie is possible then make one
-            not_in_bundle = (set(BOOKS) - set(bundle)).pop()
-            if len(stacks) < 4 and not_in_bundle in stacks:
-                bundle.append(not_in_bundle)
-                stacks = stacks - Counter({not_in_bundle: 1})
-            bundles.append(bundle)
+        occurences = stacks.most_common()
+        bundle = [book[0] for book in occurences[:3]] + [book[0] for book in occurences[-1:]]
+        stacks = stacks - Counter(bundle)
+
+        not_in_bundle = (set(BOOKS) - set(bundle)).pop()
+        if len(stacks) < 4 and not_in_bundle in stacks:
+            bundle.append(not_in_bundle)
+            stacks = stacks - Counter({not_in_bundle: 1})
+        bundles.append(bundle)
 
     # Make bundle with the remaining books, the simplest way possible
     while sum(stacks.values()):
@@ -57,20 +50,32 @@ def get_price(cart):
                 for stack in bundle_books(cart)])
 
 
+def price(cart):
+    return get_price(cart)
+
+
+def as_sets(bundles):
+    bundle_sets = []
+    for bundle in bundles:
+        bundle_sets.append(set(bundle))
+    return bundle_sets
+
+
 class TestKataPotter(unittest.TestCase):
     def setUp(self):
         self.cart = []
 
     def test_2_series_missing_each_missing_one_are_separated_correctly(self):
         cart = [1] * 2 + [2] * 2 + [3] * 2 + [4] + [5]
-        self.assertEqual(bundle_books(cart), [[1, 2, 3, 4], [1, 2, 3, 5]])
+        self.assertIn(set([1, 2, 3, 4]), as_sets(bundle_books(cart)))
+        self.assertIn(set([1, 2, 3, 5]), as_sets(bundle_books(cart)))
 
     def test_full_series_plus_some_single_books_are_separated_correctly(self):
         cart = BOOKS * 2 + [1] * 3
-        self.assertEqual(bundle_books(cart), [
-            BOOKS,
-            BOOKS,
-            [1], [1], [1]
+        self.assertEqual(as_sets(bundle_books(cart)), [
+            set(BOOKS),
+            set(BOOKS),
+            set([1, ]), set([1, ]), set([1, ])
         ])
 
     def test_un_livre_coute_8(self):
@@ -116,6 +121,38 @@ class TestKataPotter(unittest.TestCase):
     def test_deux_1_deux_2_deux_3_un_4_et_un_5(self):
         self.cart = [1, 2, 3, 4, 1, 2, 3, 5]
         self.assertEquals(get_price(self.cart), 51.2)
+
+class TestKataPotterOfficial(unittest.TestCase):
+    def test_Basics(self):
+        self.assertEqual(0, price([]))
+        self.assertEqual(8, price([0]))
+        self.assertEqual(8, price([1]))
+        self.assertEqual(8, price([2]))
+        self.assertEqual(8, price([3]))
+        self.assertEqual(8, price([4]))
+        self.assertEqual(8 * 2, price([0, 0]))
+        self.assertEqual(8 * 3, price([1, 1, 1]))
+
+    def test_SimpleDiscounts(self):
+        self.assertEqual(8 * 2 * 0.95, price([0, 1]))
+        self.assertEqual(8 * 3 * 0.9, price([0, 2, 4]))
+        self.assertEqual(8 * 4 * 0.8, price([0, 1, 2, 4]))
+        self.assertEqual(8 * 5 * 0.75, price([0, 1, 2, 3, 4]))
+
+    def test_SeveralDiscounts(self):
+        self.assertEqual(8 + (8 * 2 * 0.95), price([2, 2, 1]))
+        self.assertEqual(2 * (8 * 2 * 0.95), price([2, 2, 1, 1]))
+        self.assertEqual((8 * 4 * 0.8) + (8 * 2 * 0.95), price([4, 4, 1, 2, 2, 3]))
+        self.assertEqual(8 + (8 * 5 * 0.75), price([5, 1, 1, 2, 3, 4]))
+
+    def test_EdgeCases(self):
+        #self.assertEqual(2 * (8 * 4 * 0.8), price([0, 0, 1, 1, 2, 2, 3, 4]))
+        self.assertEqual(3 * (8 * 5 * 0.75) + 2 * (8 * 4 * 0.8),
+                         price([5, 5, 5, 5, 5,
+                                1, 1, 1, 1, 1,
+                                2, 2, 2, 2,
+                                3, 3, 3, 3, 3,
+                                4, 4, 4, 4]))
 
 if __name__ == "__main__":
     unittest.main()
